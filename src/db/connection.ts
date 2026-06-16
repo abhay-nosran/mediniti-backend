@@ -4,6 +4,8 @@ import { Pool } from 'pg';
 // The pool is created once and reused across all requests.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
+  // Railway's managed Postgres requires SSL in production.
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   // Keep a minimum of 2 connections warm; scale up to 10 under load.
   min: 2,
   max: 10,
@@ -11,6 +13,11 @@ const pool = new Pool({
   idleTimeoutMillis: 30_000,
   // Fail fast if we can't get a connection from the pool within 5 s.
   connectionTimeoutMillis: 5_000,
+  // Send TCP keepalives so the OS detects and closes dead connections
+  // before pg-pool tries to reuse them (prevents "terminating connection"
+  // errors from silently stalling queries on Railway).
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10_000,
 });
 
 // Propagate unexpected pool errors to stderr rather than crashing the process.

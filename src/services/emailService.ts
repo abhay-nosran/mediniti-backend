@@ -1,17 +1,16 @@
 import nodemailer, { Transporter } from 'nodemailer';
 import { ContactFormData, GapAnalysisFormData } from '../types';
 
-// ─── SMTP transporter (created lazily / once) ─────────────────────────────────
-
-let _transporter: Transporter | null = null;
+// ─── SMTP transporter (created fresh per call to avoid stale connections) ────
 
 function getTransporter(): Transporter {
-  if (_transporter) return _transporter;
-
-  _transporter = nodemailer.createTransport({
+  // A fresh transporter is created on every call so that stale or timed-out
+  // SMTP connections (common on Railway / cloud environments) are never reused.
+  return nodemailer.createTransport({
     host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
     port: Number(process.env.SMTP_PORT ?? 587),
-    secure: false,          // STARTTLS on port 587
+    // Use TLS on port 465, STARTTLS on 587
+    secure: process.env.SMTP_PORT === '465',
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
@@ -21,8 +20,6 @@ function getTransporter(): Transporter {
     greetingTimeout: 10_000,
     socketTimeout: 15_000,
   });
-
-  return _transporter;
 }
 
 // ─── Brand constants ──────────────────────────────────────────────────────────
