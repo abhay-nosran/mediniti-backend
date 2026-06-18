@@ -25,8 +25,9 @@ function getResendClient(): Resend {
 
 const BRAND_COLOR  = '#2563eb';
 const COMPANY_NAME = process.env.COMPANY_NAME ?? 'MediNiti Solution';
-const ADMIN_EMAIL  = process.env.ADMIN_EMAIL  ?? 'contact@medineti.com';
+const ADMIN_EMAIL  = process.env.ADMIN_EMAIL  ?? 'admin@medineti.com';
 const COMPANY_PHONE = process.env.COMPANY_PHONE ?? '+91 9667224884';
+const QUERY_EMAIL = process.env.QUERY_EMAIL ?? 'info@medineti.com';
 
 // ─── Shared layout wrapper ────────────────────────────────────────────────────
 
@@ -71,8 +72,8 @@ function emailLayout(bodyContent: string): string {
                        padding:20px 40px;text-align:center;">
               <p style="margin:0;color:#6b7280;font-size:12px;line-height:1.6;">
                 ${COMPANY_NAME} &bull; ${COMPANY_PHONE} &bull;
-                <a href="mailto:${ADMIN_EMAIL}" style="color:${BRAND_COLOR};text-decoration:none;">
-                  ${ADMIN_EMAIL}
+                <a href="mailto:${QUERY_EMAIL}" style="color:${BRAND_COLOR};text-decoration:none;">
+                  ${QUERY_EMAIL}
                 </a>
               </p>
               <p style="margin:8px 0 0;color:#9ca3af;font-size:11px;">
@@ -140,8 +141,8 @@ function buildContactUserEmail(data: ContactFormData): string {
       📞 <a href="tel:${COMPANY_PHONE}" style="color:${BRAND_COLOR};text-decoration:none;">
             ${COMPANY_PHONE}
           </a><br/>
-      ✉️ <a href="mailto:${ADMIN_EMAIL}" style="color:${BRAND_COLOR};text-decoration:none;">
-            ${ADMIN_EMAIL}
+      ✉️ <a href="mailto:${QUERY_EMAIL}" style="color:${BRAND_COLOR};text-decoration:none;">
+            ${QUERY_EMAIL}
           </a>
     </p>
   `;
@@ -222,8 +223,8 @@ function buildGapAnalysisUserEmail(data: GapAnalysisFormData): string {
       📞 <a href="tel:${COMPANY_PHONE}" style="color:${BRAND_COLOR};text-decoration:none;">
             ${COMPANY_PHONE}
           </a><br/>
-      ✉️ <a href="mailto:${ADMIN_EMAIL}" style="color:${BRAND_COLOR};text-decoration:none;">
-            ${ADMIN_EMAIL}
+      ✉️ <a href="mailto:${QUERY_EMAIL}" style="color:${BRAND_COLOR};text-decoration:none;">
+            ${QUERY_EMAIL}
           </a>
     </p>
   `;
