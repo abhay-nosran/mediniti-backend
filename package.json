@@ -16,7 +16,8 @@
     "healthcare-consulting-site": "file:..",
     "helmet": "7.1.0",
     "nodemailer": "6.9.14",
-    "pg": "8.12.0"
+    "pg": "8.12.0",
+    "resend": "^4.0.0"
   },
   "devDependencies": {
     "@types/cors": "2.8.17",

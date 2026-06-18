@@ -1,25 +1,24 @@
-import nodemailer, { Transporter } from 'nodemailer';
+import { Resend } from 'resend';
 import { ContactFormData, GapAnalysisFormData } from '../types';
 
-// ─── SMTP transporter (created fresh per call to avoid stale connections) ────
+// ─── Resend client (HTTP-based — not blocked by Railway's network) ────────────
+//
+// Railway (and most PaaS platforms) block outbound SMTP ports 25 / 465 / 587,
+// which is why nodemailer produced "Connection timeout" errors in production
+// even though the same code worked locally.  Resend uses HTTPS (port 443)
+// which is always open, making it the correct transport for hosted environments.
+//
+// Setup (one-time):
+//   1. Sign up at https://resend.com — free tier is 3,000 emails/month.
+//   2. Add & verify your sending domain (or use the sandbox address for testing).
+//   3. Generate an API key and set RESEND_API_KEY in your Railway environment.
 
-function getTransporter(): Transporter {
-  // A fresh transporter is created on every call so that stale or timed-out
-  // SMTP connections (common on Railway / cloud environments) are never reused.
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST ?? 'smtp.gmail.com',
-    port: Number(process.env.SMTP_PORT ?? 587),
-    // Use TLS on port 465, STARTTLS on 587
-    secure: process.env.SMTP_PORT === '465',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-    // Reasonable timeouts so a stalled SMTP server doesn't hang the API
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 15_000,
-  });
+function getResendClient(): Resend {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    throw new Error('[Email] RESEND_API_KEY environment variable is not set.');
+  }
+  return new Resend(apiKey);
 }
 
 // ─── Brand constants ──────────────────────────────────────────────────────────
@@ -270,24 +269,41 @@ export async function sendContactEmails(
   data: ContactFormData,
   ipAddress: string | null,
 ): Promise<void> {
-  const transporter = getTransporter();
-  const from = `"${COMPANY_NAME}" <${process.env.SMTP_USER}>`;
+  console.log(`[Email] sendContactEmails — starting for ${data.email} (ip: ${ipAddress ?? 'unknown'})`);
 
-  await Promise.all([
-    transporter.sendMail({
+  const resend = getResendClient();
+  const from = `${COMPANY_NAME} <${process.env.RESEND_FROM_ADDRESS ?? `noreply@${process.env.RESEND_DOMAIN ?? 'yourdomain.com'}`}>`;
+
+  console.log(`[Email] Using from address: ${from}`);
+  console.log(`[Email] Sending user confirmation to: ${data.email}`);
+  console.log(`[Email] Sending admin notification to: ${ADMIN_EMAIL}`);
+
+  const [userResult, adminResult] = await Promise.all([
+    resend.emails.send({
       from,
-      to: data.email,
+      to: [data.email],
       subject: `Thank you for contacting ${COMPANY_NAME}`,
       html: buildContactUserEmail(data),
     }),
-    transporter.sendMail({
+    resend.emails.send({
       from,
-      to: ADMIN_EMAIL,
+      to: [ADMIN_EMAIL],
       replyTo: data.email,
       subject: `[Contact Form] New enquiry from ${data.name} — ${data.organization}`,
       html: buildContactAdminEmail(data, ipAddress),
     }),
   ]);
+
+  if (userResult.error) {
+    console.error('[Email] Failed to send user confirmation:', JSON.stringify(userResult.error));
+    throw new Error(`User confirmation email failed: ${userResult.error.message}`);
+  }
+  if (adminResult.error) {
+    console.error('[Email] Failed to send admin notification:', JSON.stringify(adminResult.error));
+    throw new Error(`Admin notification email failed: ${adminResult.error.message}`);
+  }
+
+  console.log(`[Email] Contact emails sent — user id: ${userResult.data?.id}, admin id: ${adminResult.data?.id}`);
 }
 
 /**
@@ -298,22 +314,39 @@ export async function sendGapAnalysisEmails(
   data: GapAnalysisFormData,
   ipAddress: string | null,
 ): Promise<void> {
-  const transporter = getTransporter();
-  const from = `"${COMPANY_NAME}" <${process.env.SMTP_USER}>`;
+  console.log(`[Email] sendGapAnalysisEmails — starting for ${data.email} (ip: ${ipAddress ?? 'unknown'})`);
 
-  await Promise.all([
-    transporter.sendMail({
+  const resend = getResendClient();
+  const from = `${COMPANY_NAME} <${process.env.RESEND_FROM_ADDRESS ?? `noreply@${process.env.RESEND_DOMAIN ?? 'yourdomain.com'}`}>`;
+
+  console.log(`[Email] Using from address: ${from}`);
+  console.log(`[Email] Sending user confirmation to: ${data.email}`);
+  console.log(`[Email] Sending admin notification to: ${ADMIN_EMAIL}`);
+
+  const [userResult, adminResult] = await Promise.all([
+    resend.emails.send({
       from,
-      to: data.email,
+      to: [data.email],
       subject: `Your Gap Analysis Request — ${COMPANY_NAME}`,
       html: buildGapAnalysisUserEmail(data),
     }),
-    transporter.sendMail({
+    resend.emails.send({
       from,
-      to: ADMIN_EMAIL,
+      to: [ADMIN_EMAIL],
       replyTo: data.email,
       subject: `[Gap Analysis] New booking from ${data.name} — ${data.hospitalName}`,
       html: buildGapAnalysisAdminEmail(data, ipAddress),
     }),
   ]);
+
+  if (userResult.error) {
+    console.error('[Email] Failed to send user confirmation:', JSON.stringify(userResult.error));
+    throw new Error(`User confirmation email failed: ${userResult.error.message}`);
+  }
+  if (adminResult.error) {
+    console.error('[Email] Failed to send admin notification:', JSON.stringify(adminResult.error));
+    throw new Error(`Admin notification email failed: ${adminResult.error.message}`);
+  }
+
+  console.log(`[Email] Gap analysis emails sent — user id: ${userResult.data?.id}, admin id: ${adminResult.data?.id}`);
 }
